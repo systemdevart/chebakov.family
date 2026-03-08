@@ -18,7 +18,7 @@ interface FamilyMemberNodeProps {
 }
 
 function FamilyMemberNode({ data }: FamilyMemberNodeProps) {
-  const { setSelectedMember, openDrawer, selectedMemberId } = useFamilyStore();
+  const { setSelectedMember, openDrawer, selectedMemberId, highlightedIds } = useFamilyStore();
   const { member } = data;
 
   const handleClick = () => {
@@ -27,10 +27,11 @@ function FamilyMemberNode({ data }: FamilyMemberNodeProps) {
   };
 
   const isSelected = selectedMemberId === member.id;
+  const isHighlighted = highlightedIds.has(member.id);
 
   return (
     <div
-      className={`family-member-node ${member.gender} ${isSelected ? 'selected' : ''}`}
+      className={`family-member-node ${member.gender} ${isSelected ? 'selected' : ''} ${isHighlighted ? 'highlighted' : ''}`}
       onClick={handleClick}
     >
       <Handle type="target" position={Position.Top} id="top" className="handle" />

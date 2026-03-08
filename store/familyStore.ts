@@ -12,12 +12,14 @@ function getAuthHeader(): string {
 interface FamilyStore {
   data: FamilyData;
   selectedMemberId: string | null;
+  highlightedIds: Set<string>;
   isDrawerOpen: boolean;
   isLoading: boolean;
   error: string | null;
 
   // Actions
   setSelectedMember: (id: string | null) => void;
+  setHighlightedIds: (ids: Set<string>) => void;
   openDrawer: () => void;
   closeDrawer: () => void;
 
@@ -46,13 +48,41 @@ const emptyData: FamilyData = {
 export const useFamilyStore = create<FamilyStore>((set, get) => ({
   data: emptyData,
   selectedMemberId: null,
+  highlightedIds: new Set<string>(),
   isDrawerOpen: false,
   isLoading: false,
   error: null,
 
-  setSelectedMember: (id) => set({ selectedMemberId: id }),
+  setSelectedMember: (id) => {
+    set({ selectedMemberId: id });
+    // Calculate highlighted subtree
+    if (id) {
+      const highlighted = new Set<string>();
+      const member = get().getMemberById(id);
+      if (member) {
+        highlighted.add(id);
+        // Add spouses
+        member.spouseIds.forEach((sId) => highlighted.add(sId));
+        // Add descendants recursively
+        const addDescendants = (mId: string) => {
+          const m = get().getMemberById(mId);
+          if (m) {
+            m.childrenIds.forEach((cId) => {
+              highlighted.add(cId);
+              addDescendants(cId);
+            });
+          }
+        };
+        addDescendants(id);
+      }
+      set({ highlightedIds: highlighted });
+    } else {
+      set({ highlightedIds: new Set() });
+    }
+  },
+  setHighlightedIds: (ids) => set({ highlightedIds: ids }),
   openDrawer: () => set({ isDrawerOpen: true }),
-  closeDrawer: () => set({ isDrawerOpen: false }),
+  closeDrawer: () => set({ isDrawerOpen: false, selectedMemberId: null, highlightedIds: new Set() }),
 
   fetchData: async () => {
     set({ isLoading: true, error: null });

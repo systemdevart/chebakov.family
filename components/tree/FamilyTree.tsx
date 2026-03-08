@@ -32,9 +32,9 @@ function buildTreeLayout(
 
   const memberMap = new Map(members.map((m) => [m.id, m]));
 
-  // Build reverse lookup maps for relationships
-  const spouseOf = new Map<string, string[]>(); // who lists this person as spouse
-  const parentOf = new Map<string, string[]>(); // who lists this person as parent
+  // Build reverse lookup maps
+  const spouseOf = new Map<string, string[]>();
+  const parentOf = new Map<string, string[]>();
 
   members.forEach((m) => {
     m.spouseIds.forEach((sId) => {
@@ -57,111 +57,266 @@ function buildTreeLayout(
     const member = memberMap.get(memberId);
     if (!member) return;
 
-    // Parents are one generation up
     member.parentIds.forEach((pId) => assignGeneration(pId, gen - 1));
-    // Children are one generation down
     member.childrenIds.forEach((cId) => assignGeneration(cId, gen + 1));
-    // Also check reverse: who lists me as their parent (my children)
     (parentOf.get(memberId) || []).forEach((cId) => assignGeneration(cId, gen + 1));
-
-    // Spouses are same generation
     member.spouseIds.forEach((sId) => assignGeneration(sId, gen));
-    // Also check reverse: who lists me as their spouse
     (spouseOf.get(memberId) || []).forEach((sId) => assignGeneration(sId, gen));
   }
 
-  // Start from root
   assignGeneration(rootId, 0);
 
-  // Assign any unpositioned members based on their relationships
   members.forEach((m) => {
     if (!generations.has(m.id)) {
-      // Try to find generation from existing relationships
       let foundGen: number | null = null;
-
-      // Check if any of my spouses have a generation
       for (const sId of m.spouseIds) {
-        if (generations.has(sId)) {
-          foundGen = generations.get(sId)!;
-          break;
-        }
+        if (generations.has(sId)) { foundGen = generations.get(sId)!; break; }
       }
-      // Check if any of my children have a generation
       if (foundGen === null) {
         for (const cId of m.childrenIds) {
-          if (generations.has(cId)) {
-            foundGen = generations.get(cId)! - 1;
-            break;
-          }
+          if (generations.has(cId)) { foundGen = generations.get(cId)! - 1; break; }
         }
       }
-      // Check if any of my parents have a generation
       if (foundGen === null) {
         for (const pId of m.parentIds) {
-          if (generations.has(pId)) {
-            foundGen = generations.get(pId)! + 1;
-            break;
-          }
+          if (generations.has(pId)) { foundGen = generations.get(pId)! + 1; break; }
         }
       }
-
       assignGeneration(m.id, foundGen ?? 0);
     }
   });
 
-  // Group by generation
-  const genGroups = new Map<number, FamilyMember[]>();
-  members.forEach((m) => {
-    const gen = generations.get(m.id) ?? 0;
-    if (!genGroups.has(gen)) {
-      genGroups.set(gen, []);
-    }
-    genGroups.get(gen)!.push(m);
-  });
-
-  // Sort generations
-  const sortedGens = Array.from(genGroups.keys()).sort((a, b) => a - b);
-  const minGen = sortedGens[0] ?? 0;
-
-  // Position nodes
   const nodeWidth = 200;
   const nodeHeight = 80;
   const horizontalGap = 60;
   const verticalGap = 120;
+  const familyGap = 100; // Gap between different family units
 
-  sortedGens.forEach((gen) => {
-    const genMembers = genGroups.get(gen) ?? [];
-    const genIndex = gen - minGen;
-    const y = genIndex * (nodeHeight + verticalGap);
+  // Get all children for a couple (intersection - children that belong to BOTH parents if both specified)
+  function getCoupleChildren(parent1Id: string, parent2Id?: string): string[] {
+    const p1 = memberMap.get(parent1Id);
+    if (!p1) return [];
 
-    // Sort by birth date (oldest first), keeping spouses adjacent
-    const sortedMembers = [...genMembers].sort((a, b) => {
-      if (!a.birthDate && !b.birthDate) return 0;
-      if (!a.birthDate) return 1;
-      if (!b.birthDate) return -1;
-      return new Date(a.birthDate).getTime() - new Date(b.birthDate).getTime();
+    let childIds: string[];
+    if (parent2Id) {
+      const p2 = memberMap.get(parent2Id);
+      if (p2) {
+        // Children that have BOTH parents
+        const p1Children = new Set(p1.childrenIds);
+        childIds = p2.childrenIds.filter(c => p1Children.has(c));
+      } else {
+        childIds = [...p1.childrenIds];
+      }
+    } else {
+      childIds = [...p1.childrenIds];
+    }
+
+    // Sort by birth date
+    return childIds.sort((a, b) => {
+      const ma = memberMap.get(a);
+      const mb = memberMap.get(b);
+      if (!ma?.birthDate && !mb?.birthDate) return 0;
+      if (!ma?.birthDate) return 1;
+      if (!mb?.birthDate) return -1;
+      return new Date(ma.birthDate).getTime() - new Date(mb.birthDate).getTime();
+    });
+  }
+
+  // Position a family unit recursively, returns the width used
+  interface FamilyUnit {
+    coupleIds: string[];
+    children: FamilyUnit[];
+    x: number;
+    width: number;
+  }
+
+  // Store built units by couple key for reuse
+  const builtUnits = new Map<string, FamilyUnit>();
+
+  function buildFamilyUnit(personId: string, processedCouples: Set<string>): FamilyUnit | null {
+    const person = memberMap.get(personId);
+    if (!person) return null;
+
+    // Check if person already positioned via another branch
+    const personKey = personId;
+    if (processedCouples.has(personKey)) return null;
+
+    // Get spouse(s)
+    const allSpouses = new Set([
+      ...person.spouseIds,
+      ...(spouseOf.get(personId) || []),
+    ]);
+
+    // Only include spouse in couple if they don't have their own parents in the tree
+    // (cross-family marriages are connected by edges only, not positioned together)
+    let spouseId: string | undefined;
+    for (const sId of allSpouses) {
+      const spouse = memberMap.get(sId);
+      if (spouse && spouse.parentIds.length === 0) {
+        // Spouse has no parents in tree - position them together
+        spouseId = sId;
+        break;
+      }
+    }
+
+    const coupleKey = [personId, spouseId].filter(Boolean).sort().join('-');
+
+    // Return existing unit if already built
+    if (builtUnits.has(coupleKey)) {
+      return builtUnits.get(coupleKey)!;
+    }
+
+    if (processedCouples.has(coupleKey)) return null;
+    processedCouples.add(coupleKey);
+    processedCouples.add(personId);
+    if (spouseId) processedCouples.add(spouseId);
+
+    const coupleIds = spouseId ? [personId, spouseId] : [personId];
+
+    // Get children - only those belonging to this person (not via spouse with parents)
+    const childIds = person.childrenIds.slice().sort((a, b) => {
+      const ma = memberMap.get(a);
+      const mb = memberMap.get(b);
+      if (!ma?.birthDate && !mb?.birthDate) return 0;
+      if (!ma?.birthDate) return 1;
+      if (!mb?.birthDate) return -1;
+      return new Date(ma.birthDate).getTime() - new Date(mb.birthDate).getTime();
     });
 
-    const totalWidth = sortedMembers.length * nodeWidth + (sortedMembers.length - 1) * horizontalGap;
-    const startX = -totalWidth / 2;
+    // Build child family units
+    const childUnits: FamilyUnit[] = [];
+    childIds.forEach((childId) => {
+      const childUnit = buildFamilyUnit(childId, processedCouples);
+      if (childUnit) childUnits.push(childUnit);
+    });
 
-    sortedMembers.forEach((member, idx) => {
-      if (positioned.has(member.id)) return;
+    const unit: FamilyUnit = { coupleIds, children: childUnits, x: 0, width: 0 };
+    builtUnits.set(coupleKey, unit);
+    return unit;
+  }
 
-      const x = startX + idx * (nodeWidth + horizontalGap);
+  // Calculate width for each family unit
+  function calculateWidth(unit: FamilyUnit): number {
+    const coupleWidth = unit.coupleIds.length * nodeWidth + (unit.coupleIds.length - 1) * horizontalGap;
 
+    if (unit.children.length === 0) {
+      unit.width = coupleWidth;
+      return coupleWidth;
+    }
+
+    let childrenTotalWidth = 0;
+    unit.children.forEach((child, i) => {
+      childrenTotalWidth += calculateWidth(child);
+      if (i < unit.children.length - 1) childrenTotalWidth += familyGap;
+    });
+
+    unit.width = Math.max(coupleWidth, childrenTotalWidth);
+    return unit.width;
+  }
+
+  // Position family unit
+  function positionFamily(unit: FamilyUnit, startX: number, gen: number) {
+    const y = (gen - minGen) * (nodeHeight + verticalGap);
+    const coupleWidth = unit.coupleIds.length * nodeWidth + (unit.coupleIds.length - 1) * horizontalGap;
+    const coupleStartX = startX + (unit.width - coupleWidth) / 2;
+
+    // Position couple
+    unit.coupleIds.forEach((id, i) => {
+      if (positioned.has(id)) return;
+      const x = coupleStartX + i * (nodeWidth + horizontalGap);
       nodes.push({
-        id: member.id,
+        id,
         type: 'familyMember',
         position: { x, y },
-        data: {
-          member,
-          isRoot: member.id === rootId,
-        },
+        data: { member: memberMap.get(id)!, isRoot: id === rootId },
       });
-
-      positioned.add(member.id);
+      positioned.add(id);
     });
+
+    // Position children
+    let childX = startX;
+    unit.children.forEach((childUnit, i) => {
+      const childGen = gen + 1;
+      positionFamily(childUnit, childX, childGen);
+      childX += childUnit.width;
+      if (i < unit.children.length - 1) childX += familyGap;
+    });
+
+    unit.x = startX;
+  }
+
+  // Find all root ancestors (those with no parents)
+  const rootAncestors = new Set<string>();
+  const visitedForAncestors = new Set<string>();
+
+  function findRootAncestors(personId: string) {
+    if (visitedForAncestors.has(personId)) return;
+    visitedForAncestors.add(personId);
+
+    const person = memberMap.get(personId);
+    if (!person) return;
+
+    if (person.parentIds.length === 0) {
+      rootAncestors.add(personId);
+    } else {
+      person.parentIds.forEach(pId => findRootAncestors(pId));
+    }
+
+    // Also check spouse's ancestors
+    person.spouseIds.forEach(sId => {
+      const spouse = memberMap.get(sId);
+      if (spouse) {
+        spouse.parentIds.forEach(pId => findRootAncestors(pId));
+      }
+    });
+  }
+
+  findRootAncestors(rootId);
+
+  // Build family units starting from root ancestors
+  const processedCouples = new Set<string>();
+  const topLevelUnits: FamilyUnit[] = [];
+
+  rootAncestors.forEach(ancestorId => {
+    const unit = buildFamilyUnit(ancestorId, processedCouples);
+    if (unit) topLevelUnits.push(unit);
+  });
+
+  // Calculate minimum generation
+  const minGen = Math.min(...Array.from(generations.values()));
+
+  // Calculate total width for top level units
+  let totalWidth = 0;
+  topLevelUnits.forEach((unit, i) => {
+    calculateWidth(unit);
+    totalWidth += unit.width;
+    if (i < topLevelUnits.length - 1) totalWidth += familyGap;
+  });
+
+  // Position all units starting from top level
+  let startX = -totalWidth / 2;
+  topLevelUnits.forEach((unit, i) => {
+    const unitGen = generations.get(unit.coupleIds[0]) ?? minGen;
+    positionFamily(unit, startX, unitGen);
+    startX += unit.width;
+    if (i < topLevelUnits.length - 1) startX += familyGap;
+  });
+
+  // Position any remaining unpositioned members (edge cases)
+  let extraX = totalWidth / 2 + familyGap;
+  members.forEach((m) => {
+    if (!positioned.has(m.id)) {
+      const gen = generations.get(m.id) ?? 0;
+      const y = (gen - minGen) * (nodeHeight + verticalGap);
+      nodes.push({
+        id: m.id,
+        type: 'familyMember',
+        position: { x: extraX, y },
+        data: { member: m, isRoot: m.id === rootId },
+      });
+      positioned.add(m.id);
+      extraX += nodeWidth + horizontalGap;
+    }
   });
 
   // Build a map of node positions for spouse edge direction
@@ -224,7 +379,8 @@ function buildTreeLayout(
         type: 'straight',
         style: {
           stroke: color,
-          strokeWidth: 3,
+          strokeWidth: 2,
+          strokeDasharray: '6 4',
         },
       });
     });

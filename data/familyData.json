@@ -30,14 +30,15 @@
       "gender": "male",
       "birthPlace": "Лысьва, Россия",
       "parentIds": [
-        "anfisa-chebakova"
+        "anfisa-chebakova",
+        "mihail-chebakov-1772983010866"
       ],
       "spouseIds": [
         "larisa-chebakova"
       ],
       "childrenIds": [
-        "dmitry-chebakov",
         "arseniy-chebakov-1772975358436",
+        "dmitry-chebakov",
         "grigoriy-chebakov-1772975519717",
         "elizaveta-chebakoa-1772975675423"
       ],
@@ -55,14 +56,15 @@
       "gender": "female",
       "birthPlace": "Лысьва, Россия",
       "parentIds": [
-        "tamara-ivanova"
+        "tamara-ivanova",
+        "anatoliy-zorin-1772982710653"
       ],
       "spouseIds": [
         "alexey-chebakov"
       ],
       "childrenIds": [
-        "dmitry-chebakov",
         "arseniy-chebakov-1772975358436",
+        "dmitry-chebakov",
         "grigoriy-chebakov-1772975519717",
         "elizaveta-chebakoa-1772975675423"
       ],
@@ -93,7 +95,7 @@
     {
       "id": "anfisa-chebakova",
       "firstName": "Анфиса",
-      "lastName": "Чебакова",
+      "lastName": "Проскурякова",
       "birthDate": "1941-01-21",
       "gender": "female",
       "birthPlace": "Лысьва, Россия",
@@ -171,7 +173,7 @@
     },
     {
       "firstName": "Изабелла",
-      "lastName": "Чебакова",
+      "lastName": "Полковникова",
       "patronymic": "Юрьевна",
       "birthDate": "1993-09-01",
       "deathDate": "",
@@ -180,7 +182,9 @@
       "bio": "",
       "photoUrl": "/photos/1772980671445-316877862.jpg",
       "gender": "female",
-      "parentIds": [],
+      "parentIds": [
+        "yuriy-polkovnikov-1772983094898"
+      ],
       "spouseIds": [
         "dmitry-chebakov"
       ],
@@ -212,8 +216,8 @@
     {
       "firstName": "Михаил",
       "lastName": "Чебаков",
-      "patronymic": "",
-      "birthDate": "1930-01-01",
+      "patronymic": "Михайлович",
+      "birthDate": "1949-11-07",
       "deathDate": "",
       "birthPlace": "Лысьва, Россия",
       "currentLocation": "Лысьва, Россия",
@@ -242,12 +246,35 @@
       "photoUrl": "",
       "gender": "male",
       "parentIds": [],
-      "spouseIds": [],
+      "spouseIds": [
+        "anna-kulikova-1772983627744"
+      ],
       "childrenIds": [
         "izabella-chebakova-1772975720979"
       ],
       "events": [],
       "id": "yuriy-polkovnikov-1772983094898"
+    },
+    {
+      "firstName": "Анна",
+      "lastName": "Куликова",
+      "patronymic": "Владимировна",
+      "birthDate": "1971-07-24",
+      "deathDate": "",
+      "birthPlace": "Калино, Россия",
+      "currentLocation": "Чусовой, Россия",
+      "bio": "",
+      "photoUrl": "",
+      "gender": "female",
+      "parentIds": [],
+      "spouseIds": [
+        "yuriy-polkovnikov-1772983094898"
+      ],
+      "childrenIds": [
+        "izabella-chebakova-1772975720979"
+      ],
+      "events": [],
+      "id": "anna-kulikova-1772983627744"
     }
   ],
   "relationships": [
