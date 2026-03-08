@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   LogOut,
@@ -14,12 +14,11 @@ import {
   X,
   Upload,
   Download,
-  FolderUp,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useFamilyStore } from '@/store/familyStore';
 import { getFullName, getYearsRange, generateId } from '@/utils/helpers';
-import type { FamilyMember, FamilyData } from '@/types/family';
+import type { FamilyMember } from '@/types/family';
 import './AdminDashboard.css';
 
 type EditMode = 'create' | 'edit' | null;
@@ -44,8 +43,7 @@ const emptyMember: Omit<FamilyMember, 'id'> = {
 export default function AdminDashboard() {
   const router = useRouter();
   const { logout } = useAuthStore();
-  const { data, addMember, updateMember, deleteMember, setData, uploadPhoto } = useFamilyStore();
-  const importInputRef = useRef<HTMLInputElement>(null);
+  const { data, addMember, updateMember, deleteMember, uploadPhoto } = useFamilyStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [editMode, setEditMode] = useState<EditMode>(null);
@@ -80,28 +78,6 @@ export default function AdminDashboard() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  };
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const importedData = JSON.parse(event.target?.result as string) as FamilyData;
-        if (importedData.members && importedData.rootPersonId) {
-          setData(importedData);
-          alert('Данные успешно импортированы!');
-        } else {
-          alert('Неверный формат файла');
-        }
-      } catch {
-        alert('Ошибка при чтении файла');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
   };
 
   const handleCreate = () => {
@@ -182,17 +158,6 @@ export default function AdminDashboard() {
             <Download size={18} />
             Экспорт
           </button>
-          <label className="action-header-btn import-btn" title="Импорт данных">
-            <FolderUp size={18} />
-            Импорт
-            <input
-              ref={importInputRef}
-              type="file"
-              accept=".json"
-              onChange={handleImport}
-              hidden
-            />
-          </label>
           <button className="logout-btn" onClick={handleLogout}>
             <LogOut size={18} />
             Выйти

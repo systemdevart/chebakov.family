@@ -9,12 +9,14 @@
       "birthDate": "1997-08-22",
       "gender": "male",
       "birthPlace": "Россия",
-      "bio": "Создатель этого семейного древа.",
+      "bio": "Исследователь и инженер в области ИИ, ML/R&D, академические амбиции и творческий взгляд на технологии",
       "parentIds": [
         "alexey-chebakov",
         "larisa-chebakova"
       ],
-      "spouseIds": [],
+      "spouseIds": [
+        "izabella-chebakova-1772975720979"
+      ],
       "childrenIds": [],
       "events": [],
       "currentLocation": "Белград, Сербия",
@@ -74,7 +76,7 @@
         "larisa-chebakova"
       ],
       "events": [],
-      "photoUrl": "/photos/tamara-ivanova.webp",
+      "photoUrl": "/photos/1772980996607-118938412.jpg",
       "currentLocation": "Лысьва, Россия"
     },
     {
@@ -84,14 +86,15 @@
       "birthDate": "1941-01-21",
       "gender": "female",
       "birthPlace": "Россия",
-      "bio": "Бабушка Дмитрия по отцовской линии.",
+      "bio": "",
       "parentIds": [],
       "spouseIds": [],
       "childrenIds": [
         "alexey-chebakov"
       ],
       "events": [],
-      "currentLocation": "Лысьва, Россия"
+      "currentLocation": "Лысьва, Россия",
+      "photoUrl": "/photos/1772980957277-294512276.webp"
     },
     {
       "firstName": "Арсений",
@@ -117,7 +120,7 @@
       "firstName": "Григорий",
       "lastName": "Чебаков",
       "patronymic": "",
-      "birthDate": "1998-01-23",
+      "birthDate": "1999-01-23",
       "deathDate": "",
       "birthPlace": "Лысьва, Россия",
       "currentLocation": "Екатеринбург, Россия",
@@ -135,14 +138,14 @@
     },
     {
       "firstName": "Елизавета",
-      "lastName": "Чебакоа",
+      "lastName": "Саковская",
       "patronymic": "",
       "birthDate": "2005-07-13",
       "deathDate": "",
       "birthPlace": "Лысьва, Россия",
       "currentLocation": "",
       "bio": "",
-      "photoUrl": "/photos/elizaveta-chebakoa-1772975675423.webp",
+      "photoUrl": "/photos/1772980974632-884312826.jpg",
       "gender": "female",
       "parentIds": [
         "alexey-chebakov",
@@ -162,8 +165,8 @@
       "birthPlace": "Чусовой, Россия",
       "currentLocation": "Белград, Сербия",
       "bio": "",
-      "photoUrl": "",
-      "gender": "male",
+      "photoUrl": "/photos/1772980671445-316877862.jpg",
+      "gender": "female",
       "parentIds": [],
       "spouseIds": [
         "dmitry-chebakov"

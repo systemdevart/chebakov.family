@@ -1,13 +1,11 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
-  useNodesState,
-  useEdgesState,
   type Node,
   type Edge,
   MarkerType,
@@ -92,12 +90,32 @@ function buildTreeLayout(
     const genIndex = gen - minGen;
     const y = genIndex * (nodeHeight + verticalGap);
 
-    // Sort members: try to keep spouses together
-    const sortedMembers = [...genMembers].sort((a, b) => {
-      // Keep couples together
-      if (a.spouseIds.includes(b.id)) return -1;
-      if (b.spouseIds.includes(a.id)) return 1;
-      return 0;
+    // Sort by birth date (oldest first)
+    const sortedByBirth = [...genMembers].sort((a, b) => {
+      if (!a.birthDate && !b.birthDate) return 0;
+      if (!a.birthDate) return 1;
+      if (!b.birthDate) return -1;
+      return new Date(a.birthDate).getTime() - new Date(b.birthDate).getTime();
+    });
+
+    // Group couples together - place spouse right after their partner
+    const sortedMembers: FamilyMember[] = [];
+    const placed = new Set<string>();
+
+    sortedByBirth.forEach((member) => {
+      if (placed.has(member.id)) return;
+
+      sortedMembers.push(member);
+      placed.add(member.id);
+
+      // Add spouse(s) right after
+      member.spouseIds.forEach((spouseId) => {
+        const spouse = memberMap.get(spouseId);
+        if (spouse && !placed.has(spouseId) && generations.get(spouseId) === gen) {
+          sortedMembers.push(spouse);
+          placed.add(spouseId);
+        }
+      });
     });
 
     const totalWidth = sortedMembers.length * nodeWidth + (sortedMembers.length - 1) * horizontalGap;
@@ -122,32 +140,48 @@ function buildTreeLayout(
     });
   });
 
+  // Unique colors for spouse pairs
+  const spouseColors = [
+    '#f472b6', // pink
+    '#a78bfa', // purple
+    '#fb923c', // orange
+    '#4ade80', // green
+    '#38bdf8', // sky
+    '#f87171', // red
+  ];
+  let spouseColorIndex = 0;
+
   // Create edges
   members.forEach((member) => {
-    // Parent-child edges
+    // Parent-child edges - from bottom to top
     member.parentIds.forEach((parentId) => {
       edges.push({
         id: `${parentId}-${member.id}`,
         source: parentId,
         target: member.id,
+        sourceHandle: 'bottom',
+        targetHandle: 'top',
         type: 'smoothstep',
         style: { stroke: '#94a3b8', strokeWidth: 2 },
         markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' },
       });
     });
 
-    // Spouse edges (dotted)
+    // Spouse edges - connect from left side to right side (middle of blocks)
     member.spouseIds.forEach((spouseId) => {
       if (member.id < spouseId) {
+        const color = spouseColors[spouseColorIndex % spouseColors.length];
+        spouseColorIndex++;
         edges.push({
           id: `spouse-${member.id}-${spouseId}`,
           source: member.id,
           target: spouseId,
+          sourceHandle: 'left',
+          targetHandle: 'right',
           type: 'straight',
           style: {
-            stroke: '#f472b6',
-            strokeWidth: 2,
-            strokeDasharray: '5,5',
+            stroke: color,
+            strokeWidth: 3,
           },
         });
       }
@@ -160,32 +194,19 @@ function buildTreeLayout(
 export default function FamilyTree() {
   const { data } = useFamilyStore();
 
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(
+  const { nodes, edges } = useMemo(
     () => buildTreeLayout(data.members, data.rootPersonId),
     [data.members, data.rootPersonId]
   );
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-
-  // Update nodes when data changes
-  useEffect(() => {
-    const { nodes: newNodes, edges: newEdges } = buildTreeLayout(
-      data.members,
-      data.rootPersonId
-    );
-    setNodes(newNodes as FamilyNode[]);
-    setEdges(newEdges);
-  }, [data.members, data.rootPersonId, setNodes, setEdges]);
 
   return (
     <div className="family-tree-container">
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
+        nodesDraggable={false}
+        nodesConnectable={false}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}
@@ -196,7 +217,6 @@ export default function FamilyTree() {
         <MiniMap
           nodeColor={(node) => {
             const nodeData = node.data as FamilyMemberNodeData;
-            if (nodeData?.isRoot) return '#f59e0b';
             return nodeData?.member?.gender === 'male' ? '#3b82f6' : '#ec4899';
           }}
           maskColor="rgba(255, 255, 255, 0.8)"

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFileSync, existsSync, mkdirSync } from 'fs';
+import { writeFileSync, existsSync, mkdirSync, chmodSync } from 'fs';
 import { join } from 'path';
 
 const PHOTOS_DIR = join(process.cwd(), 'public', 'photos');
@@ -32,7 +32,9 @@ export async function POST(request: NextRequest) {
     // Convert file to buffer and save
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    writeFileSync(join(PHOTOS_DIR, filename), buffer);
+    const filePath = join(PHOTOS_DIR, filename);
+    writeFileSync(filePath, buffer);
+    chmodSync(filePath, 0o644);
 
     const photoUrl = `/photos/${filename}`;
     return NextResponse.json({ photoUrl });

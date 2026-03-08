@@ -19,7 +19,7 @@ interface FamilyMemberNodeProps {
 
 function FamilyMemberNode({ data }: FamilyMemberNodeProps) {
   const { setSelectedMember, openDrawer, selectedMemberId } = useFamilyStore();
-  const { member, isRoot } = data;
+  const { member } = data;
 
   const handleClick = () => {
     setSelectedMember(member.id);
@@ -30,10 +30,12 @@ function FamilyMemberNode({ data }: FamilyMemberNodeProps) {
 
   return (
     <div
-      className={`family-member-node ${member.gender} ${isRoot ? 'root' : ''} ${isSelected ? 'selected' : ''}`}
+      className={`family-member-node ${member.gender} ${isSelected ? 'selected' : ''}`}
       onClick={handleClick}
     >
-      <Handle type="target" position={Position.Top} className="handle" />
+      <Handle type="target" position={Position.Top} id="top" className="handle" />
+      <Handle type="source" position={Position.Left} id="left" className="handle handle-side" />
+      <Handle type="target" position={Position.Right} id="right" className="handle handle-side" />
 
       <div className="node-content">
         <div className="avatar">
@@ -49,7 +51,7 @@ function FamilyMemberNode({ data }: FamilyMemberNodeProps) {
         </div>
       </div>
 
-      <Handle type="source" position={Position.Bottom} className="handle" />
+      <Handle type="source" position={Position.Bottom} id="bottom" className="handle" />
     </div>
   );
 }
