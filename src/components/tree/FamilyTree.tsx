@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useEffect } from 'react';
+import { useMemo, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -9,14 +9,12 @@ import {
   type Node,
   type Edge,
   MarkerType,
-  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import FamilyMemberNode, { type FamilyMemberNodeData } from './FamilyMemberNode';
 import { useFamilyStore } from '../../store/familyStore';
 import type { FamilyMember } from '../../types/family';
-import { Crosshair } from 'lucide-react';
 import './FamilyTree.css';
 
 const nodeTypes = {
@@ -49,10 +47,10 @@ function buildTreeLayout(
     member.parentIds.forEach((pId) => assignGeneration(pId, gen - 1));
     // Children are one generation down
     member.childrenIds.forEach((cId) => assignGeneration(cId, gen + 1));
-    // Spouses are same generation
+    // Spouses are same generation - recursively process their family too
     member.spouseIds.forEach((sId) => {
       if (!generations.has(sId)) {
-        generations.set(sId, gen);
+        assignGeneration(sId, gen);
       }
     });
   }
@@ -159,7 +157,6 @@ function buildTreeLayout(
 
 export default function FamilyTree() {
   const { data } = useFamilyStore();
-  const { setCenter } = useReactFlow();
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () => buildTreeLayout(data.members, data.rootPersonId),
@@ -179,16 +176,6 @@ export default function FamilyTree() {
     setEdges(newEdges);
   }, [data.members, data.rootPersonId, setNodes, setEdges]);
 
-  const handleCenterOnRoot = useCallback(() => {
-    const rootNode = nodes.find((n) => n.id === data.rootPersonId);
-    if (rootNode) {
-      setCenter(rootNode.position.x + 100, rootNode.position.y + 40, {
-        zoom: 1,
-        duration: 500,
-      });
-    }
-  }, [nodes, data.rootPersonId, setCenter]);
-
   return (
     <div className="family-tree-container">
       <ReactFlow
@@ -201,7 +188,6 @@ export default function FamilyTree() {
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}
         maxZoom={2}
-        attributionPosition="bottom-left"
       >
         <Background color="#e2e8f0" gap={20} />
         <Controls showInteractive={false} />
@@ -215,11 +201,6 @@ export default function FamilyTree() {
           style={{ background: '#f8fafc' }}
         />
       </ReactFlow>
-
-      <button className="center-button" onClick={handleCenterOnRoot} title="На меня">
-        <Crosshair size={20} />
-        <span>На меня</span>
-      </button>
     </div>
   );
 }

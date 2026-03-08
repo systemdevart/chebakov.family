@@ -4,34 +4,8 @@
   position: relative;
 }
 
-.center-button {
-  position: absolute;
-  bottom: 24px;
-  right: 24px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #1e293b;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
-  z-index: 10;
-}
-
-.center-button:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
 .react-flow__attribution {
-  background: transparent !important;
+  display: none !important;
 }
 
 .react-flow__minimap {

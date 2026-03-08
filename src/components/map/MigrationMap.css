@@ -154,6 +154,19 @@
   margin: 12px 14px;
 }
 
+.leaflet-popup {
+  z-index: 35 !important;
+}
+
+.leaflet-pane {
+  z-index: 30 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 35 !important;
+}
+
 @media (max-width: 768px) {
   .migration-map {
     padding: 20px;

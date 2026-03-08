@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LogOut,
@@ -11,11 +11,13 @@ import {
   Save,
   X,
   Upload,
+  Download,
+  FolderUp,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useFamilyStore } from '../../store/familyStore';
 import { getFullName, getYearsRange, generateId } from '../../utils/helpers';
-import type { FamilyMember } from '../../types/family';
+import type { FamilyMember, FamilyData } from '../../types/family';
 import './AdminDashboard.css';
 
 type EditMode = 'create' | 'edit' | null;
@@ -40,21 +42,64 @@ const emptyMember: Omit<FamilyMember, 'id'> = {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { logout } = useAuthStore();
-  const { data, addMember, updateMember, deleteMember } = useFamilyStore();
+  const { data, addMember, updateMember, deleteMember, setData } = useFamilyStore();
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [editMode, setEditMode] = useState<EditMode>(null);
   const [currentMember, setCurrentMember] = useState<Partial<FamilyMember>>(emptyMember);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const filteredMembers = data.members.filter((member) => {
-    const fullName = getFullName(member).toLowerCase();
-    return fullName.includes(searchQuery.toLowerCase());
-  });
+  const filteredMembers = data.members
+    .filter((member) => {
+      const fullName = getFullName(member).toLowerCase();
+      return fullName.includes(searchQuery.toLowerCase());
+    })
+    .sort((a, b) => {
+      if (!a.birthDate && !b.birthDate) return 0;
+      if (!a.birthDate) return 1;
+      if (!b.birthDate) return -1;
+      return new Date(a.birthDate).getTime() - new Date(b.birthDate).getTime();
+    });
 
   const handleLogout = () => {
     logout();
     navigate('/admin');
+  };
+
+  const handleExport = () => {
+    const jsonData = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'familyData.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedData = JSON.parse(event.target?.result as string) as FamilyData;
+        if (importedData.members && importedData.rootPersonId) {
+          setData(importedData);
+          alert('Данные успешно импортированы!');
+        } else {
+          alert('Неверный формат файла');
+        }
+      } catch {
+        alert('Ошибка при чтении файла');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   const handleCreate = () => {
@@ -129,10 +174,27 @@ export default function AdminDashboard() {
           <Users size={24} />
           <h1>Управление семейным древом</h1>
         </div>
-        <button className="logout-btn" onClick={handleLogout}>
-          <LogOut size={18} />
-          Выйти
-        </button>
+        <div className="header-actions">
+          <button className="action-header-btn" onClick={handleExport} title="Экспорт данных">
+            <Download size={18} />
+            Экспорт
+          </button>
+          <label className="action-header-btn import-btn" title="Импорт данных">
+            <FolderUp size={18} />
+            Импорт
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleImport}
+              hidden
+            />
+          </label>
+          <button className="logout-btn" onClick={handleLogout}>
+            <LogOut size={18} />
+            Выйти
+          </button>
+        </div>
       </header>
 
       <div className="admin-content">
@@ -322,69 +384,95 @@ export default function AdminDashboard() {
 
                 <div className="form-group">
                   <label>Родители</label>
-                  <select
-                    multiple
-                    value={currentMember.parentIds || []}
-                    onChange={(e) =>
-                      handleRelationshipChange(
-                        'parentIds',
-                        Array.from(e.target.selectedOptions, (opt) => opt.value)
-                      )
-                    }
-                  >
+                  <div className="checkbox-list">
                     {data.members
                       .filter((m) => m.id !== editingId)
+                      .sort((a, b) => {
+                        if (!a.birthDate && !b.birthDate) return 0;
+                        if (!a.birthDate) return 1;
+                        if (!b.birthDate) return -1;
+                        return new Date(a.birthDate).getTime() - new Date(b.birthDate).getTime();
+                      })
                       .map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {getFullName(m)}
-                        </option>
+                        <label key={m.id} className="checkbox-item">
+                          <input
+                            type="checkbox"
+                            checked={(currentMember.parentIds || []).includes(m.id)}
+                            onChange={(e) => {
+                              const current = currentMember.parentIds || [];
+                              if (e.target.checked) {
+                                handleRelationshipChange('parentIds', [...current, m.id]);
+                              } else {
+                                handleRelationshipChange('parentIds', current.filter(id => id !== m.id));
+                              }
+                            }}
+                          />
+                          <span>{getFullName(m)}</span>
+                        </label>
                       ))}
-                  </select>
-                  <small>Удерживайте Ctrl для выбора нескольких</small>
+                  </div>
                 </div>
 
                 <div className="form-group">
                   <label>Супруг(а)</label>
-                  <select
-                    multiple
-                    value={currentMember.spouseIds || []}
-                    onChange={(e) =>
-                      handleRelationshipChange(
-                        'spouseIds',
-                        Array.from(e.target.selectedOptions, (opt) => opt.value)
-                      )
-                    }
-                  >
+                  <div className="checkbox-list">
                     {data.members
                       .filter((m) => m.id !== editingId)
+                      .sort((a, b) => {
+                        if (!a.birthDate && !b.birthDate) return 0;
+                        if (!a.birthDate) return 1;
+                        if (!b.birthDate) return -1;
+                        return new Date(a.birthDate).getTime() - new Date(b.birthDate).getTime();
+                      })
                       .map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {getFullName(m)}
-                        </option>
+                        <label key={m.id} className="checkbox-item">
+                          <input
+                            type="checkbox"
+                            checked={(currentMember.spouseIds || []).includes(m.id)}
+                            onChange={(e) => {
+                              const current = currentMember.spouseIds || [];
+                              if (e.target.checked) {
+                                handleRelationshipChange('spouseIds', [...current, m.id]);
+                              } else {
+                                handleRelationshipChange('spouseIds', current.filter(id => id !== m.id));
+                              }
+                            }}
+                          />
+                          <span>{getFullName(m)}</span>
+                        </label>
                       ))}
-                  </select>
+                  </div>
                 </div>
 
                 <div className="form-group">
                   <label>Дети</label>
-                  <select
-                    multiple
-                    value={currentMember.childrenIds || []}
-                    onChange={(e) =>
-                      handleRelationshipChange(
-                        'childrenIds',
-                        Array.from(e.target.selectedOptions, (opt) => opt.value)
-                      )
-                    }
-                  >
+                  <div className="checkbox-list">
                     {data.members
                       .filter((m) => m.id !== editingId)
+                      .sort((a, b) => {
+                        if (!a.birthDate && !b.birthDate) return 0;
+                        if (!a.birthDate) return 1;
+                        if (!b.birthDate) return -1;
+                        return new Date(a.birthDate).getTime() - new Date(b.birthDate).getTime();
+                      })
                       .map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {getFullName(m)}
-                        </option>
+                        <label key={m.id} className="checkbox-item">
+                          <input
+                            type="checkbox"
+                            checked={(currentMember.childrenIds || []).includes(m.id)}
+                            onChange={(e) => {
+                              const current = currentMember.childrenIds || [];
+                              if (e.target.checked) {
+                                handleRelationshipChange('childrenIds', [...current, m.id]);
+                              } else {
+                                handleRelationshipChange('childrenIds', current.filter(id => id !== m.id));
+                              }
+                            }}
+                          />
+                          <span>{getFullName(m)}</span>
+                        </label>
                       ))}
-                  </select>
+                  </div>
                 </div>
               </div>
 
