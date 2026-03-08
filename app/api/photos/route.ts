@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFileSync, existsSync, mkdirSync, chmodSync } from 'fs';
 import { join } from 'path';
+import { checkBasicAuth } from '../auth';
 
 const PHOTOS_DIR = join(process.cwd(), 'public', 'photos');
 
@@ -9,8 +10,11 @@ if (!existsSync(PHOTOS_DIR)) {
   mkdirSync(PHOTOS_DIR, { recursive: true });
 }
 
-// POST /api/photos - Upload photo
+// POST /api/photos - Upload photo (protected)
 export async function POST(request: NextRequest) {
+  const authError = checkBasicAuth(request);
+  if (authError) return authError;
+
   try {
     const formData = await request.formData();
     const file = formData.get('photo') as File | null;

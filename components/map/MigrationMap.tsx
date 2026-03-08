@@ -30,6 +30,8 @@ const locationCoords: Record<string, [number, number]> = {
   // Russia
   'Россия': [55.7558, 37.6173],
   'Москва': [55.7558, 37.6173],
+  'Лысьва': [58.1067, 57.8053],
+  'Чусовой': [58.3000, 57.8167],
   'Санкт-Петербург': [59.9343, 30.3351],
   'Новосибирск': [55.0084, 82.9357],
   'Екатеринбург': [56.8389, 60.6057],
@@ -246,15 +248,24 @@ function getCoords(location?: string): [number, number] | null {
     return locationCoords[normalizedLocation];
   }
 
+  // Try to parse "City, Country" format - prioritize city
+  const parts = normalizedLocation.split(',').map(p => p.trim());
+  if (parts.length >= 1) {
+    const city = parts[0];
+    if (locationCoords[city]) {
+      return locationCoords[city];
+    }
+  }
+
   // Check if any key is contained in location (case-insensitive)
   const lowerLocation = normalizedLocation.toLowerCase();
   for (const [key, coords] of Object.entries(locationCoords)) {
-    if (lowerLocation.includes(key.toLowerCase()) || key.toLowerCase().includes(lowerLocation)) {
+    if (lowerLocation.includes(key.toLowerCase())) {
       return coords;
     }
   }
 
-  // No match found - return null instead of defaulting to Moscow
+  // No match found
   return null;
 }
 

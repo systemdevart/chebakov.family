@@ -78,18 +78,15 @@
 }
 
 .family-member-node .handle {
-  width: 8px;
-  height: 8px;
-  background: #cbd5e1;
+  width: 1px;
+  height: 1px;
+  background: transparent;
   border: none;
   opacity: 0;
+  pointer-events: none;
 }
 
 .family-member-node .handle-side {
   top: 50%;
   transform: translateY(-50%);
-}
-
-.family-member-node:hover .handle {
-  opacity: 1;
 }

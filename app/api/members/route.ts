@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { checkBasicAuth } from '../auth';
 
 const DATA_FILE = join(process.cwd(), 'data', 'familyData.json');
 
@@ -17,8 +18,11 @@ function writeData(data: unknown) {
   writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
-// POST /api/members - Add new member
+// POST /api/members - Add new member (protected)
 export async function POST(request: NextRequest) {
+  const authError = checkBasicAuth(request);
+  if (authError) return authError;
+
   try {
     const data = readData();
     const newMember = await request.json();

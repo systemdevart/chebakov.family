@@ -3,6 +3,12 @@
 import { create } from 'zustand';
 import type { FamilyMember, FamilyData } from '@/types/family';
 
+function getAuthHeader(): string {
+  const username = process.env.NEXT_PUBLIC_ADMIN_USERNAME || 'chebakov';
+  const password = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'family2024';
+  return 'Basic ' + btoa(`${username}:${password}`);
+}
+
 interface FamilyStore {
   data: FamilyData;
   selectedMemberId: string | null;
@@ -64,11 +70,13 @@ export const useFamilyStore = create<FamilyStore>((set, get) => ({
     try {
       const response = await fetch('/api/members', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': getAuthHeader(),
+        },
         body: JSON.stringify(member),
       });
       if (!response.ok) throw new Error('Failed to add member');
-      // Refetch to get server state
       await get().fetchData();
     } catch (error) {
       set({ error: (error as Error).message });
@@ -80,11 +88,13 @@ export const useFamilyStore = create<FamilyStore>((set, get) => ({
     try {
       const response = await fetch(`/api/members/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': getAuthHeader(),
+        },
         body: JSON.stringify(updates),
       });
       if (!response.ok) throw new Error('Failed to update member');
-      // Refetch to get server state
       await get().fetchData();
     } catch (error) {
       set({ error: (error as Error).message });
@@ -96,9 +106,11 @@ export const useFamilyStore = create<FamilyStore>((set, get) => ({
     try {
       const response = await fetch(`/api/members/${id}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': getAuthHeader(),
+        },
       });
       if (!response.ok) throw new Error('Failed to delete member');
-      // Refetch to get server state
       await get().fetchData();
     } catch (error) {
       set({ error: (error as Error).message });
@@ -112,6 +124,9 @@ export const useFamilyStore = create<FamilyStore>((set, get) => ({
 
     const response = await fetch('/api/photos', {
       method: 'POST',
+      headers: {
+        'Authorization': getAuthHeader(),
+      },
       body: formData,
     });
 
@@ -124,11 +139,13 @@ export const useFamilyStore = create<FamilyStore>((set, get) => ({
     try {
       const response = await fetch('/api/family', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': getAuthHeader(),
+        },
         body: JSON.stringify(data),
       });
       if (!response.ok) throw new Error('Failed to save data');
-      // Refetch to get server state
       await get().fetchData();
     } catch (error) {
       set({ error: (error as Error).message });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { checkBasicAuth } from '../../auth';
 
 const DATA_FILE = join(process.cwd(), 'data', 'familyData.json');
 
@@ -50,11 +51,14 @@ export async function GET(
   }
 }
 
-// PUT /api/members/[id] - Update member
+// PUT /api/members/[id] - Update member (protected)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authError = checkBasicAuth(request);
+  if (authError) return authError;
+
   try {
     const { id } = await params;
     const data = readData();
@@ -72,11 +76,14 @@ export async function PUT(
   }
 }
 
-// DELETE /api/members/[id] - Delete member
+// DELETE /api/members/[id] - Delete member (protected)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authError = checkBasicAuth(request);
+  if (authError) return authError;
+
   try {
     const { id } = await params;
     const data = readData();

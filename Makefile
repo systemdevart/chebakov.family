@@ -13,33 +13,27 @@ build:
 
 start:
 	@mkdir -p $(PROJECT_DIR)/logs
-	@if [ -f $(PID_FILE) ] && kill -0 $$(cat $(PID_FILE)) 2>/dev/null; then \
-		echo "Server already running (PID: $$(cat $(PID_FILE)))"; \
+	@echo "Starting server on port $(PORT)..."
+	@cd $(PROJECT_DIR) && \
+	nohup npm run start -- -p $(PORT) > $(LOG_FILE) 2>&1 & echo $$! > $(PID_FILE)
+	@sleep 3
+	@if curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:$(PORT) | grep -q "200"; then \
+		echo "Server started successfully (PID: $$(cat $(PID_FILE)))"; \
 	else \
-		cd $(PROJECT_DIR) && \
-		nohup npm run start -- -p $(PORT) > $(LOG_FILE) 2>&1 & echo $$! > $(PID_FILE); \
-		sleep 2; \
-		if kill -0 $$(cat $(PID_FILE)) 2>/dev/null; then \
-			echo "Server started on port $(PORT) (PID: $$(cat $(PID_FILE)))"; \
-		else \
-			echo "Failed to start server. Check $(LOG_FILE)"; \
-			exit 1; \
-		fi \
+		echo "Failed to start server. Check $(LOG_FILE)"; \
+		cat $(LOG_FILE) | tail -10; \
+		exit 1; \
 	fi
 
 stop:
+	@echo "Stopping server..."
 	@if [ -f $(PID_FILE) ]; then \
-		if kill -0 $$(cat $(PID_FILE)) 2>/dev/null; then \
-			kill $$(cat $(PID_FILE)); \
-			rm -f $(PID_FILE); \
-			echo "Server stopped"; \
-		else \
-			rm -f $(PID_FILE); \
-			echo "PID file exists but process not running, cleaned up"; \
-		fi \
-	else \
-		echo "No server running (no PID file)"; \
+		kill $$(cat $(PID_FILE)) 2>/dev/null || true; \
+		rm -f $(PID_FILE); \
 	fi
+	@fuser -k $(PORT)/tcp 2>/dev/null || true
+	@sleep 1
+	@echo "Server stopped"
 
 restart: stop start
 

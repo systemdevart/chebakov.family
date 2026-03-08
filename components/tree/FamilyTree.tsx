@@ -5,7 +5,6 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
   type Node,
   type Edge,
   MarkerType,
@@ -33,6 +32,21 @@ function buildTreeLayout(
 
   const memberMap = new Map(members.map((m) => [m.id, m]));
 
+  // Build reverse lookup maps for relationships
+  const spouseOf = new Map<string, string[]>(); // who lists this person as spouse
+  const parentOf = new Map<string, string[]>(); // who lists this person as parent
+
+  members.forEach((m) => {
+    m.spouseIds.forEach((sId) => {
+      if (!spouseOf.has(sId)) spouseOf.set(sId, []);
+      spouseOf.get(sId)!.push(m.id);
+    });
+    m.parentIds.forEach((pId) => {
+      if (!parentOf.has(pId)) parentOf.set(pId, []);
+      parentOf.get(pId)!.push(m.id);
+    });
+  });
+
   // Build generations
   const generations = new Map<string, number>();
 
@@ -47,21 +61,51 @@ function buildTreeLayout(
     member.parentIds.forEach((pId) => assignGeneration(pId, gen - 1));
     // Children are one generation down
     member.childrenIds.forEach((cId) => assignGeneration(cId, gen + 1));
-    // Spouses are same generation - recursively process their family too
-    member.spouseIds.forEach((sId) => {
-      if (!generations.has(sId)) {
-        assignGeneration(sId, gen);
-      }
-    });
+    // Also check reverse: who lists me as their parent (my children)
+    (parentOf.get(memberId) || []).forEach((cId) => assignGeneration(cId, gen + 1));
+
+    // Spouses are same generation
+    member.spouseIds.forEach((sId) => assignGeneration(sId, gen));
+    // Also check reverse: who lists me as their spouse
+    (spouseOf.get(memberId) || []).forEach((sId) => assignGeneration(sId, gen));
   }
 
   // Start from root
   assignGeneration(rootId, 0);
 
-  // Assign any unpositioned members
+  // Assign any unpositioned members based on their relationships
   members.forEach((m) => {
     if (!generations.has(m.id)) {
-      assignGeneration(m.id, 0);
+      // Try to find generation from existing relationships
+      let foundGen: number | null = null;
+
+      // Check if any of my spouses have a generation
+      for (const sId of m.spouseIds) {
+        if (generations.has(sId)) {
+          foundGen = generations.get(sId)!;
+          break;
+        }
+      }
+      // Check if any of my children have a generation
+      if (foundGen === null) {
+        for (const cId of m.childrenIds) {
+          if (generations.has(cId)) {
+            foundGen = generations.get(cId)! - 1;
+            break;
+          }
+        }
+      }
+      // Check if any of my parents have a generation
+      if (foundGen === null) {
+        for (const pId of m.parentIds) {
+          if (generations.has(pId)) {
+            foundGen = generations.get(pId)! + 1;
+            break;
+          }
+        }
+      }
+
+      assignGeneration(m.id, foundGen ?? 0);
     }
   });
 
@@ -90,32 +134,12 @@ function buildTreeLayout(
     const genIndex = gen - minGen;
     const y = genIndex * (nodeHeight + verticalGap);
 
-    // Sort by birth date (oldest first)
-    const sortedByBirth = [...genMembers].sort((a, b) => {
+    // Sort by birth date (oldest first), keeping spouses adjacent
+    const sortedMembers = [...genMembers].sort((a, b) => {
       if (!a.birthDate && !b.birthDate) return 0;
       if (!a.birthDate) return 1;
       if (!b.birthDate) return -1;
       return new Date(a.birthDate).getTime() - new Date(b.birthDate).getTime();
-    });
-
-    // Group couples together - place spouse right after their partner
-    const sortedMembers: FamilyMember[] = [];
-    const placed = new Set<string>();
-
-    sortedByBirth.forEach((member) => {
-      if (placed.has(member.id)) return;
-
-      sortedMembers.push(member);
-      placed.add(member.id);
-
-      // Add spouse(s) right after
-      member.spouseIds.forEach((spouseId) => {
-        const spouse = memberMap.get(spouseId);
-        if (spouse && !placed.has(spouseId) && generations.get(spouseId) === gen) {
-          sortedMembers.push(spouse);
-          placed.add(spouseId);
-        }
-      });
     });
 
     const totalWidth = sortedMembers.length * nodeWidth + (sortedMembers.length - 1) * horizontalGap;
@@ -140,6 +164,12 @@ function buildTreeLayout(
     });
   });
 
+  // Build a map of node positions for spouse edge direction
+  const nodePositions = new Map<string, { x: number; y: number }>();
+  nodes.forEach((node) => {
+    nodePositions.set(node.id, node.position);
+  });
+
   // Unique colors for spouse pairs
   const spouseColors = [
     '#f472b6', // pink
@@ -150,6 +180,7 @@ function buildTreeLayout(
     '#f87171', // red
   ];
   let spouseColorIndex = 0;
+  const processedSpousePairs = new Set<string>();
 
   // Create edges
   members.forEach((member) => {
@@ -167,24 +198,35 @@ function buildTreeLayout(
       });
     });
 
-    // Spouse edges - connect from left side to right side (middle of blocks)
+    // Spouse edges - connect from right side of left person to left side of right person
     member.spouseIds.forEach((spouseId) => {
-      if (member.id < spouseId) {
-        const color = spouseColors[spouseColorIndex % spouseColors.length];
-        spouseColorIndex++;
-        edges.push({
-          id: `spouse-${member.id}-${spouseId}`,
-          source: member.id,
-          target: spouseId,
-          sourceHandle: 'left',
-          targetHandle: 'right',
-          type: 'straight',
-          style: {
-            stroke: color,
-            strokeWidth: 3,
-          },
-        });
-      }
+      const pairKey = [member.id, spouseId].sort().join('-');
+      if (processedSpousePairs.has(pairKey)) return;
+      processedSpousePairs.add(pairKey);
+
+      const memberPos = nodePositions.get(member.id);
+      const spousePos = nodePositions.get(spouseId);
+      if (!memberPos || !spousePos) return;
+
+      // Determine which is on the left
+      const leftId = memberPos.x < spousePos.x ? member.id : spouseId;
+      const rightId = memberPos.x < spousePos.x ? spouseId : member.id;
+
+      const color = spouseColors[spouseColorIndex % spouseColors.length];
+      spouseColorIndex++;
+
+      edges.push({
+        id: `spouse-${pairKey}`,
+        source: leftId,
+        target: rightId,
+        sourceHandle: 'right',
+        targetHandle: 'left',
+        type: 'straight',
+        style: {
+          stroke: color,
+          strokeWidth: 3,
+        },
+      });
     });
   });
 
@@ -214,14 +256,6 @@ export default function FamilyTree() {
       >
         <Background color="#e2e8f0" gap={20} />
         <Controls showInteractive={false} />
-        <MiniMap
-          nodeColor={(node) => {
-            const nodeData = node.data as FamilyMemberNodeData;
-            return nodeData?.member?.gender === 'male' ? '#3b82f6' : '#ec4899';
-          }}
-          maskColor="rgba(255, 255, 255, 0.8)"
-          style={{ background: '#f8fafc' }}
-        />
       </ReactFlow>
     </div>
   );

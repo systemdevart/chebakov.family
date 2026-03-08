@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { checkBasicAuth } from '../auth';
 
 const DATA_DIR = join(process.cwd(), 'data');
 const DATA_FILE = join(DATA_DIR, 'familyData.json');
@@ -43,8 +44,11 @@ export async function GET() {
   }
 }
 
-// PUT /api/family - Save all family data
+// PUT /api/family - Save all family data (protected)
 export async function PUT(request: NextRequest) {
+  const authError = checkBasicAuth(request);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     writeData(body);

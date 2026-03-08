@@ -34,8 +34,8 @@ function FamilyMemberNode({ data }: FamilyMemberNodeProps) {
       onClick={handleClick}
     >
       <Handle type="target" position={Position.Top} id="top" className="handle" />
-      <Handle type="source" position={Position.Left} id="left" className="handle handle-side" />
-      <Handle type="target" position={Position.Right} id="right" className="handle handle-side" />
+      <Handle type="target" position={Position.Left} id="left" className="handle handle-side" />
+      <Handle type="source" position={Position.Right} id="right" className="handle handle-side" />
 
       <div className="node-content">
         <div className="avatar">

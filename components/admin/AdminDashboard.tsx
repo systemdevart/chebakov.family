@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   LogOut,
@@ -49,6 +49,16 @@ export default function AdminDashboard() {
   const [editMode, setEditMode] = useState<EditMode>(null);
   const [currentMember, setCurrentMember] = useState<Partial<FamilyMember>>(emptyMember);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const editPanelRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to edit panel on mobile when it opens
+  useEffect(() => {
+    if (editMode && editPanelRef.current) {
+      setTimeout(() => {
+        editPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [editMode]);
 
   const filteredMembers = data.members
     .filter((member) => {
@@ -223,7 +233,7 @@ export default function AdminDashboard() {
         </div>
 
         {editMode && (
-          <div className="edit-panel">
+          <div className="edit-panel" ref={editPanelRef}>
             <div className="panel-title">
               <h2>{editMode === 'create' ? 'Новый член семьи' : 'Редактирование'}</h2>
               <button className="close-btn" onClick={handleCancel}>
