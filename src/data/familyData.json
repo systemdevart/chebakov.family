@@ -1,0 +1,102 @@
+{
+  "rootPersonId": "dmitry-chebakov",
+  "members": [
+    {
+      "id": "dmitry-chebakov",
+      "firstName": "Дмитрий",
+      "lastName": "Чебаков",
+      "patronymic": "Алексеевич",
+      "birthDate": "1997-08-22",
+      "gender": "male",
+      "birthPlace": "Россия",
+      "bio": "Создатель этого семейного древа.",
+      "parentIds": ["alexey-chebakov", "larisa-chebakova"],
+      "spouseIds": [],
+      "childrenIds": [],
+      "events": []
+    },
+    {
+      "id": "alexey-chebakov",
+      "firstName": "Алексей",
+      "lastName": "Чебаков",
+      "birthDate": "1971-05-19",
+      "gender": "male",
+      "birthPlace": "Россия",
+      "parentIds": ["anfisa-chebakova"],
+      "spouseIds": ["larisa-chebakova"],
+      "childrenIds": ["dmitry-chebakov"],
+      "events": []
+    },
+    {
+      "id": "larisa-chebakova",
+      "firstName": "Лариса",
+      "lastName": "Чебакова",
+      "patronymic": "Ивановна",
+      "birthDate": "1975-09-04",
+      "gender": "female",
+      "birthPlace": "Россия",
+      "parentIds": ["tamara-ivanova"],
+      "spouseIds": ["alexey-chebakov"],
+      "childrenIds": ["dmitry-chebakov"],
+      "events": []
+    },
+    {
+      "id": "tamara-ivanova",
+      "firstName": "Тамара",
+      "lastName": "Иванова",
+      "birthDate": "1941-07-28",
+      "gender": "female",
+      "birthPlace": "Россия",
+      "bio": "Бабушка Дмитрия по материнской линии.",
+      "parentIds": [],
+      "spouseIds": [],
+      "childrenIds": ["larisa-chebakova"],
+      "events": []
+    },
+    {
+      "id": "anfisa-chebakova",
+      "firstName": "Анфиса",
+      "lastName": "Чебакова",
+      "birthDate": "1941-01-21",
+      "gender": "female",
+      "birthPlace": "Россия",
+      "bio": "Бабушка Дмитрия по отцовской линии.",
+      "parentIds": [],
+      "spouseIds": [],
+      "childrenIds": ["alexey-chebakov"],
+      "events": []
+    }
+  ],
+  "relationships": [
+    {
+      "id": "rel-1",
+      "type": "parent-child",
+      "person1Id": "alexey-chebakov",
+      "person2Id": "dmitry-chebakov"
+    },
+    {
+      "id": "rel-2",
+      "type": "parent-child",
+      "person1Id": "larisa-chebakova",
+      "person2Id": "dmitry-chebakov"
+    },
+    {
+      "id": "rel-3",
+      "type": "spouse",
+      "person1Id": "alexey-chebakov",
+      "person2Id": "larisa-chebakova"
+    },
+    {
+      "id": "rel-4",
+      "type": "parent-child",
+      "person1Id": "tamara-ivanova",
+      "person2Id": "larisa-chebakova"
+    },
+    {
+      "id": "rel-5",
+      "type": "parent-child",
+      "person1Id": "anfisa-chebakova",
+      "person2Id": "alexey-chebakov"
+    }
+  ]
+}
