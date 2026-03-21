@@ -1,0 +1,17 @@
+[Unit]
+Description=Chebakov Family Tree (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=literategoggles
+WorkingDirectory=/home/literategoggles/Projects/chebakov.family
+Environment=NODE_ENV=production
+Environment=PORT=3002
+EnvironmentFile=/home/literategoggles/Projects/chebakov.family/.env
+ExecStart=/usr/bin/npx next start -p 3002
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
